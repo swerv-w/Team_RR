@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.env
+
+# 가상환경 (이름이 다를 수 있으므로 명시)
+venv/
+.venv/
+env/
+
+# IDE
+.idea/           # Pycharm
+.vscode/         # visual studio code
+
+# OS
+.DS_Store        # Mac
+Thumbs.db        # Windows
+desktop.ini      # Windows 탐색기가 폴더 아이콘/설정을 저장하는 숨김 파일
