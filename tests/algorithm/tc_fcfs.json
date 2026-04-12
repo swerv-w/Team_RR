@@ -1,0 +1,13 @@
+
+{
+    "test_id": "TC_001",
+    "algorithm": "FCFS",
+    "processes": [
+        {"pid": "P1", "arrival": 0, "burst": 5},
+        {"pid": "P2", "arrival": 2, "burst": 3}
+    ],
+    "expected": {
+        "avg_waiting_time": 2.5,
+        "avg_turnaround_time": 5.5
+    }
+}
