@@ -35,7 +35,7 @@ class WindowClass(QMainWindow, form_class):
         processes.sort(key=lambda x: x.at)
 
         current_time = 0
-        result_text = "<b>[ FCFS 스케줄링 결과 ]</b><br><br>"
+        result_text = "<b>[ FCFS scheduling result ]</b><br><br>"
         gantt_chart = "<b>Gantt Chart:</b><br>| "
 
         for p in processes:
