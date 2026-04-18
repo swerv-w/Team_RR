@@ -1,0 +1,3 @@
+# rr.py (선점 + time quantum)
+def schedule(processes: list[Process], time_quantum: int) -> tuple[list[Process], list[tuple]]:
+    ...
