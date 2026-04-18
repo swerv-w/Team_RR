@@ -17,3 +17,12 @@ env/
 .DS_Store        # Mac
 Thumbs.db        # Windows
 desktop.ini      # Windows 탐색기가 폴더 아이콘/설정을 저장하는 숨김 파일
+
+untitled.ui
+
+# update-code 브랜치에서 생성된 .idea/ 폴더 내 파일 추적 제외
+.idea/misc.xml
+.idea/modules.xml
+.idea/Scheduling_Simulator.iml
+.idea/vcs.xml
+.idea/inspectionProfiles/profiles_settings.xml
