@@ -39,45 +39,6 @@ from algorithms.hrrn import schedule, calculate_power
 # ---------------------------------------------------------------------------
 # Data structures (mirrors the shared project architecture)
 # ---------------------------------------------------------------------------
-
-@dataclass
-class Process:
-    pid: int
-    arrival_time: int
-    burst_time: int          # logical work units
-    remaining_time: int = 0
-    start_time: int = -1
-    finish_time: int = -1
-    waiting_time: int = 0
-    turnaround_time: int = 0
-    response_time: int = 0
-    normalized_turnaround_time: float = 0.0
-
-    def __post_init__(self):
-        if self.remaining_time == 0:
-            self.remaining_time = self.burst_time
-
-
-@dataclass
-class CoreConfig:
-    num_p_cores: int
-    num_e_cores: int
-
-    @property
-    def total_cores(self):
-        return self.num_p_cores + self.num_e_cores
-
-    P_CORE_RUN_POWER = 3.0
-    E_CORE_RUN_POWER = 1.0
-    P_CORE_STARTUP   = 0.5   # one-time, first activation only
-    E_CORE_STARTUP   = 0.1   # one-time, first activation only
-    # Policy 1 finalized: idle gap -> 0W (warm standby, no re-startup)
-    P_CORE_IDLE      = 0.0
-    E_CORE_IDLE      = 0.0
-    P_CORE_SPEED     = 2
-    E_CORE_SPEED     = 1
-
-
 @dataclass
 class TestCase:
     name: str

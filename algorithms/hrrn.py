@@ -109,7 +109,7 @@ def schedule(config: SimConfig):
             tick = _next_tick(tick, cores, processes)
 
     # ── 결과값 계산 ───────────────────────────────────────────────────────
-    _compute_metrics(processes)
+    _compute_metrics(processes, gantt, core_config)
 
     # ── 전력 계산 ─────────────────────────────────────────────────────────
     power = calculate_power(gantt, core_config)
@@ -240,7 +240,7 @@ def _next_tick(
     return min(candidates)
 
 
-def _compute_metrics(processes: list[Process]) -> None:
+def _compute_metrics(processes, gantt, core_config):
     """
     모든 프로세스의 결과값을 계산해 채운다.
       waiting_time         = finish_time - arrival_time - burst_time
@@ -248,10 +248,12 @@ def _compute_metrics(processes: list[Process]) -> None:
       response_time        = start_time  - arrival_time
       normalized_turnaround_time = turnaround_time / burst_time  (정책 3)
     """
-
+    core_map = {pid: core_id for pid, core_id, s, e in gantt}
     for p in processes:
+        core_type = core_map[p.pid][0]   # "P" or "E"
+        actual    = _actual_duration(p.burst_time, core_type, core_config)
         p.turnaround_time = p.finish_time - p.arrival_time
-        p.waiting_time    = p.turnaround_time - p.burst_time
+        p.waiting_time    = p.turnaround_time - actual
         p.response_time   = p.start_time - p.arrival_time
         p.normalized_turnaround_time = p.turnaround_time / p.burst_time
 
