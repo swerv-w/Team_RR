@@ -1,64 +1,129 @@
-# srtn.py (선점)
-class Process:
-    def __init__(self, pid, arrival_time, burst_time):
-        self.pid = pid
-        self.arrival_time = arrival_time
-        self.burst_time = burst_time
-        self.remaining_time = burst_time
-        self.start_time = None
-        self.finish_time = 0
-        self.waiting_time = 0
-        self.turnaround_time = 0
+def schedule(processes, core_list=None):
+    if core_list is None:
+        core_list = ["E"]
 
-def schedule(processes: list[Process]) -> tuple[list[Process], list[tuple]]:
-    time = 0.0
+    usable_cores = [i for i, core in enumerate(core_list) if core != "OFF"]
+
+    for p in processes:
+        p.remaining_time = p.burst_time
+        p.start_time = None
+        p.finish_time = None
+        p.waiting_time = None
+        p.turnaround_time = None
+        if hasattr(p, "normalized_turnaround_time"):
+            p.normalized_turnaround_time = None
+        if hasattr(p, "response_time"):
+            p.response_time = None
+
+    gantt = []
+    total_energy = 0.0
+
+    if not usable_cores:
+        print("사용 가능한 코어가 없습니다.")
+        return processes, gantt, total_energy
+
+    time = 0
     completed = 0
     n = len(processes)
 
-    processes.sort(key=lambda x: x.arrival_time)
-
-    gantt = []
-    current = None
-    start_time = 0.0
+    core_active = [False] * len(core_list)
+    run_time = {p.pid: 0 for p in processes}
+    last_gantt_index = {}
 
     while completed < n:
-        available = [p for p in processes if p.arrival_time <= time and p.remaining_time > 0]
+        available = [
+            p for p in processes
+            if p.arrival_time <= time and p.remaining_time > 0
+        ]
 
         if not available:
-            next_arrival = min(p.arrival_time for p in processes if p.remaining_time > 0)
-            time = next_arrival
+            next_times = [
+                p.arrival_time for p in processes
+                if p.remaining_time > 0
+            ]
+
+            if not next_times:
+                break
+
+            core_active = [False] * len(core_list)
+            time = min(next_times)
             continue
 
-        selected = min(available, key=lambda x: x.remaining_time)
+        available.sort(key=lambda x: (x.remaining_time, x.arrival_time, str(x.pid)))
 
-        if current != selected:
-            if current is not None:
-                gantt.append((current.pid, start_time, time))
-            current = selected
-            start_time = time
-            if current.start_time is None:
-                current.start_time = time
+        assigned = []
+        used_pids = set()
 
-        next_arrivals = [p.arrival_time for p in processes if p.arrival_time > time and p.remaining_time > 0]
-        next_arrival_time = min(next_arrivals) if next_arrivals else float('inf')
+        for core_idx in usable_cores:
+            selected = None
 
-        run_time = min(selected.remaining_time, next_arrival_time - time)
+            for p in available:
+                if p.pid not in used_pids:
+                    selected = p
+                    break
 
-        if run_time <= 0:
-            time = next_arrival_time
-            continue
+            if selected is None:
+                break
 
-        selected.remaining_time -= run_time
-        time += run_time
+            assigned.append((core_idx, selected))
+            used_pids.add(selected.pid)
 
-        if selected.remaining_time == 0:
-            selected.finish_time = time
-            selected.turnaround_time = selected.finish_time - selected.arrival_time
-            selected.waiting_time = selected.turnaround_time - selected.burst_time
-            completed += 1
+        active_now = [False] * len(core_list)
 
-    if current is not None:
-        gantt.append((current.pid, start_time, time))
+        for core_idx, p in assigned:
+            core_type = core_list[core_idx]
 
-    return processes, gantt
+            speed = 2 if core_type == "P" else 1
+            power = 3.0 if core_type == "P" else 1.0
+            startup = 0.5 if core_type == "P" else 0.1
 
+            if not core_active[core_idx]:
+                total_energy += startup
+
+            total_energy += power
+            active_now[core_idx] = True
+
+            if p.start_time is None:
+                p.start_time = time
+                if hasattr(p, "response_time"):
+                    p.response_time = time - p.arrival_time
+
+            key = core_idx
+
+            if (
+                key in last_gantt_index
+                and gantt[last_gantt_index[key]]["pid"] == p.pid
+                and gantt[last_gantt_index[key]]["finish_time"] == time
+            ):
+                gantt[last_gantt_index[key]]["finish_time"] = time + 1
+            else:
+                gantt.append({
+                    "pid": p.pid,
+                    "start_time": time,
+                    "finish_time": time + 1,
+                    "core": core_idx
+                })
+                last_gantt_index[key] = len(gantt) - 1
+
+            p.remaining_time -= speed
+            run_time[p.pid] += 1
+
+            if p.remaining_time <= 0:
+                p.remaining_time = 0
+                p.finish_time = time + 1
+                p.turnaround_time = p.finish_time - p.arrival_time
+                p.waiting_time = p.turnaround_time - run_time[p.pid]
+
+                if hasattr(p, "normalized_turnaround_time"):
+                    p.normalized_turnaround_time = round(
+                        p.turnaround_time / p.burst_time, 2
+                    )
+
+                completed += 1
+
+        core_active = active_now
+        time += 1
+
+    total_energy = round(total_energy, 2)
+
+    return processes, gantt, total_energy
