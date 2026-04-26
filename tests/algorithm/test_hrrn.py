@@ -426,14 +426,14 @@ def run_hrrn(tc: TestCase):
     try:
         from algorithms.hrrn import schedule as hrrn
         from models.sim_config import SimConfig
-        from models.core_config import CoreConfig
 
         config = SimConfig(
             processes=tc.processes,
             core_config=tc.cores,
             algorithm="HRRN",
         )
-        return hrrn(config)
+        processes, gantt, power = hrrn(config)  # 3개로 받기
+        return processes, gantt                  # 기존 테스트 형식 유지
     except ImportError:
         pytest.skip("algorithms.hrrn not yet implemented")
 
