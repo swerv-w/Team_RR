@@ -15,9 +15,9 @@ PyQt5 연동 시:
 
 from typing import Optional
 
-from models.core_config import CoreConfig
-from models.process import Process
-from models.sim_config import SimConfig, ALGORITHMS
+from core_config import CoreConfig
+from process import Process
+from sim_config import SimConfig, ALGORITHMS
 
 
 # ══════════════════════════════════════════════════════════════════════════════

@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from typing import Optional, List
 
 # 순환 import 방지: 타입 힌트용으로만 사용
-from models.core_config import CoreConfig
+from core_config import CoreConfig
 
 
 ALGORITHMS = ["FCFS", "RR", "SPN", "SRTN", "HRRN"]
