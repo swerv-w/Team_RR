@@ -30,50 +30,15 @@ NOTE: burst_time = logical work units.
 import pytest
 from dataclasses import dataclass
 from typing import List, Tuple
+from models.core_config import CoreConfig
+from models.process import Process
+from models.sim_config import SimConfig
+from algorithms.hrrn import schedule, calculate_power
 
 
 # ---------------------------------------------------------------------------
 # Data structures (mirrors the shared project architecture)
 # ---------------------------------------------------------------------------
-
-@dataclass
-class Process:
-    pid: int
-    arrival_time: int
-    burst_time: int          # logical work units
-    remaining_time: int = 0
-    start_time: int = -1
-    finish_time: int = -1
-    waiting_time: int = 0
-    turnaround_time: int = 0
-    response_time: int = 0
-    normalized_turnaround_time: float = 0.0
-
-    def __post_init__(self):
-        if self.remaining_time == 0:
-            self.remaining_time = self.burst_time
-
-
-@dataclass
-class CoreConfig:
-    num_p_cores: int
-    num_e_cores: int
-
-    @property
-    def total_cores(self):
-        return self.num_p_cores + self.num_e_cores
-
-    P_CORE_RUN_POWER = 3.0
-    E_CORE_RUN_POWER = 1.0
-    P_CORE_STARTUP   = 0.5   # one-time, first activation only
-    E_CORE_STARTUP   = 0.1   # one-time, first activation only
-    # Policy 1 finalized: idle gap -> 0W (warm standby, no re-startup)
-    P_CORE_IDLE      = 0.0
-    E_CORE_IDLE      = 0.0
-    P_CORE_SPEED     = 2
-    E_CORE_SPEED     = 1
-
-
 @dataclass
 class TestCase:
     name: str
@@ -88,7 +53,8 @@ class TestCase:
     notes: str = ""
 
 
-def make_procs(data):
+# 기존
+def make_procs(data: List[Tuple]) -> List[Process]:
     return [Process(pid=d[0], arrival_time=d[1], burst_time=d[2]) for d in data]
 
 
@@ -418,15 +384,17 @@ ALL_CASES = [TC01, TC02, TC03, TC04, TC05, TC06, TC07, TC08]
 
 
 def run_hrrn(tc: TestCase):
-    """
-    Replace with actual import once implemented.
-    Expected signature:
-        from algorithms.hrrn import hrrn
-        processes, gantt = hrrn(tc.processes, tc.cores)
-    """
     try:
-        from algorithms.hrrn import hrrn
-        return hrrn(tc.processes, tc.cores)
+        from algorithms.hrrn import schedule as hrrn
+        from models.sim_config import SimConfig
+
+        config = SimConfig(
+            processes=tc.processes,
+            core_config=tc.cores,
+            algorithm="HRRN",
+        )
+        processes, gantt, power = hrrn(config)  # 3개로 받기
+        return processes, gantt                  # 기존 테스트 형식 유지
     except ImportError:
         pytest.skip("algorithms.hrrn not yet implemented")
 
