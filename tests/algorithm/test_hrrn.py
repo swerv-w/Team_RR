@@ -30,6 +30,10 @@ NOTE: burst_time = logical work units.
 import pytest
 from dataclasses import dataclass
 from typing import List, Tuple
+from models.core_config import CoreConfig
+from models.process import Process
+from models.sim_config import SimConfig
+from algorithms.hrrn import schedule, calculate_power
 
 
 # ---------------------------------------------------------------------------
@@ -88,7 +92,8 @@ class TestCase:
     notes: str = ""
 
 
-def make_procs(data):
+# 기존
+def make_procs(data: List[Tuple]) -> List[Process]:
     return [Process(pid=d[0], arrival_time=d[1], burst_time=d[2]) for d in data]
 
 
@@ -418,15 +423,17 @@ ALL_CASES = [TC01, TC02, TC03, TC04, TC05, TC06, TC07, TC08]
 
 
 def run_hrrn(tc: TestCase):
-    """
-    Replace with actual import once implemented.
-    Expected signature:
-        from algorithms.hrrn import hrrn
-        processes, gantt = hrrn(tc.processes, tc.cores)
-    """
     try:
-        from algorithms.hrrn import hrrn
-        return hrrn(tc.processes, tc.cores)
+        from algorithms.hrrn import schedule as hrrn
+        from models.sim_config import SimConfig
+        from models.core_config import CoreConfig
+
+        config = SimConfig(
+            processes=tc.processes,
+            core_config=tc.cores,
+            algorithm="HRRN",
+        )
+        return hrrn(config)
     except ImportError:
         pytest.skip("algorithms.hrrn not yet implemented")
 
