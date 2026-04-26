@@ -8,11 +8,12 @@ CPU 스케줄링 시뮬레이터 메인 UI.
     ├── InputWidget   입력 영역 (프로세스 수, 코어 구성, 알고리즘, 도착/실행시간)
     └── OutputWidget  출력 영역 (Gantt 차트, 결과 테이블, 소비전력)
 """
-
 import sys
 import os
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from models.process import Process
 from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget,
     QVBoxLayout, QHBoxLayout, QGridLayout,
@@ -33,7 +34,7 @@ from models.input_handler import (
     validate_time_quantum,
 )
 from algorithms.hrrn import schedule as hrrn
-
+from algorithms.srtn import schedule as srtn
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Gantt 차트 위젯 (커스텀 위젯)
@@ -422,8 +423,38 @@ class MainWindow(QMainWindow):
         # }
         # schedule = algo_map.get(config.algorithm)
 
+        algo_map = {
+            "HRRN": hrrn,
+            "SRTN": srtn,
+        }
+
         try:
-            processes, gantt, power = hrrn(config)
+            schedule = algo_map[config.algorithm]
+
+            if config.algorithm == "SRTN":
+                core_list = ["P"] * config.core_config.num_p_cores + ["E"] * config.core_config.num_e_cores
+                processes, gantt, power = schedule(config.processes, core_list)
+            else:
+                processes, gantt, power = schedule(config)
+
+            fixed_gantt = []
+            for item in gantt:
+                if isinstance(item, dict):
+                    fixed_gantt.append((
+                        item["pid"],
+                        str(item["core"]),
+                        int(item["start_time"]),
+                        int(item["finish_time"])
+                    ))
+                else:
+                    fixed_gantt.append((
+                        item[0],
+                        str(item[1]),
+                        int(item[2]),
+                        int(item[3])
+                    ))
+            gantt = fixed_gantt
+
         except Exception as e:
             QMessageBox.critical(self, "실행 오류", str(e))
             return

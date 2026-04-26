@@ -10,10 +10,8 @@ def schedule(processes, core_list=None):
         p.finish_time = None
         p.waiting_time = None
         p.turnaround_time = None
-        if hasattr(p, "normalized_turnaround_time"):
-            p.normalized_turnaround_time = None
-        if hasattr(p, "response_time"):
-            p.response_time = None
+        p.normalized_turnaround_time = None
+        p.response_time = None
 
     gantt = []
     total_energy = 0.0
@@ -49,21 +47,22 @@ def schedule(processes, core_list=None):
             time = min(next_times)
             continue
 
-        available.sort(key=lambda x: (x.remaining_time, x.arrival_time, str(x.pid)))
-
         assigned = []
         used_pids = set()
 
         for core_idx in usable_cores:
-            selected = None
+            candidates = [
+                p for p in available
+                if p.pid not in used_pids
+            ]
 
-            for p in available:
-                if p.pid not in used_pids:
-                    selected = p
-                    break
-
-            if selected is None:
+            if not candidates:
                 break
+
+            selected = min(
+                candidates,
+                key=lambda x: (x.remaining_time, x.arrival_time, str(x.pid))
+            )
 
             assigned.append((core_idx, selected))
             used_pids.add(selected.pid)
@@ -85,25 +84,24 @@ def schedule(processes, core_list=None):
 
             if p.start_time is None:
                 p.start_time = time
-                if hasattr(p, "response_time"):
-                    p.response_time = time - p.arrival_time
+                p.response_time = time - p.arrival_time
 
-            key = core_idx
+            core_label = f"{core_type}{core_idx}"
 
             if (
-                key in last_gantt_index
-                and gantt[last_gantt_index[key]]["pid"] == p.pid
-                and gantt[last_gantt_index[key]]["finish_time"] == time
+                core_idx in last_gantt_index
+                and gantt[last_gantt_index[core_idx]]["pid"] == p.pid
+                and gantt[last_gantt_index[core_idx]]["finish_time"] == time
             ):
-                gantt[last_gantt_index[key]]["finish_time"] = time + 1
+                gantt[last_gantt_index[core_idx]]["finish_time"] = time + 1
             else:
                 gantt.append({
                     "pid": p.pid,
                     "start_time": time,
                     "finish_time": time + 1,
-                    "core": core_idx
+                    "core": core_label
                 })
-                last_gantt_index[key] = len(gantt) - 1
+                last_gantt_index[core_idx] = len(gantt) - 1
 
             p.remaining_time -= speed
             run_time[p.pid] += 1
@@ -114,10 +112,12 @@ def schedule(processes, core_list=None):
                 p.turnaround_time = p.finish_time - p.arrival_time
                 p.waiting_time = p.turnaround_time - run_time[p.pid]
 
-                if hasattr(p, "normalized_turnaround_time"):
+                if p.burst_time != 0:
                     p.normalized_turnaround_time = round(
                         p.turnaround_time / p.burst_time, 2
                     )
+                else:
+                    p.normalized_turnaround_time = 0
 
                 completed += 1
 
