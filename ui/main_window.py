@@ -33,6 +33,9 @@ from models.input_handler import (
     validate_time_quantum,
 )
 from algorithms.hrrn import schedule as hrrn
+from algorithms.rr   import schedule as rr
+from algorithms.spn  import schedule as spn
+from algorithms.ats  import schedule as ats
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -188,7 +191,7 @@ class InputWidget(QGroupBox):
 
         row2.addWidget(QLabel("알고리즘:"))
         self.combo_algo = QComboBox()
-        self.combo_algo.addItems(["FCFS", "RR", "SPN", "SRTN", "HRRN"])
+        self.combo_algo.addItems(["FCFS", "RR", "SPN", "SRTN", "HRRN", "ATS"])
         self.combo_algo.currentTextChanged.connect(self._on_algo_changed)
         row2.addWidget(self.combo_algo)
 
@@ -415,17 +418,31 @@ class MainWindow(QMainWindow):
         # 다른 알고리즘 구현 완료되면 아래 분기 추가
         #
         # from algorithms.fcfs import schedule as fcfs
-        # algo_map = {
-        #     "FCFS" : fcfs,
-        #     "HRRN" : hrrn,
-        #     ...
-        # }
-        # schedule = algo_map.get(config.algorithm)
+        algo_map = {
+            "RR": rr,
+            "HRRN": hrrn,
+            "SPN": spn,
+            "ATS": ats,
+            # "FCFS": fcfs,  # 보류
+            # "SRTN": srtn,  # 보류
+        }
+
+        selected_algo = inputs["algorithm"]  # 사용자가 콤보박스에서 선택한 값 (예: "SPN")
+        schedule_func = algo_map.get(selected_algo)
+
+        # 아직 로직 미반영 알고리즘 선택시 경우 처리
+        if schedule_func is None:
+            QMessageBox.warning(self, "미구현", f"{selected_algo} 알고리즘은 아직 구현되지 않았습니다.")
+            return
 
         try:
-            processes, gantt, power = hrrn(config)
+            # 2. 선택된 알고리즘 함수를 실행하고 결과(프로세스, 간트, 전력)를 받음
+            processes, gantt, power = schedule_func(config)
         except Exception as e:
-            QMessageBox.critical(self, "실행 오류", str(e))
+            # 에러 발생 시 상세 내용을 터미널에 출력하고 경고창을 띄움
+            import traceback
+            traceback.print_exc()
+            QMessageBox.critical(self, "실행 오류", f"알고리즘 실행 중 오류가 발생했습니다:\n{str(e)}")
             return
 
         # ── 결과 출력 ─────────────────────────────────────────────────────
