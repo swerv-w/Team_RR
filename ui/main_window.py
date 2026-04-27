@@ -32,6 +32,10 @@ from models.input_handler import (
     validate_algorithm,
     validate_time_quantum,
 )
+# from algorithms.fcfs import schedule as fcfs
+from algorithms.rr import schedule as rr
+from algorithms.spn import schedule as spn
+# from algorithms.srtn import schedule as srtn
 from algorithms.hrrn import schedule as hrrn
 
 
@@ -410,20 +414,22 @@ class MainWindow(QMainWindow):
             return
 
         # ── 알고리즘 실행 ─────────────────────────────────────────────────
-        # TODO: 알고리즘 선택 분기
-        # 현재는 HRRN만 연결되어 있음
-        # 다른 알고리즘 구현 완료되면 아래 분기 추가
-        #
-        # from algorithms.fcfs import schedule as fcfs
-        # algo_map = {
-        #     "FCFS" : fcfs,
-        #     "HRRN" : hrrn,
-        #     ...
-        # }
-        # schedule = algo_map.get(config.algorithm)
+        algo_map = {
+            # "FCFS": fcfs,
+            "RR"  : rr,
+            "SPN" : spn,
+            # "SRTN": sptn,
+            "HRRN": hrrn,
+        }
+
+        schedule = algo_map.get(config.algorithm)
+
+        if schedule is None:
+            QMessageBox.warning(self, "알림", f"{config.algorithm}은 아직 구현되지 않았습니다.")
+            return
 
         try:
-            processes, gantt, power = hrrn(config)
+            processes, gantt, power = schedule(config)
         except Exception as e:
             QMessageBox.critical(self, "실행 오류", str(e))
             return
