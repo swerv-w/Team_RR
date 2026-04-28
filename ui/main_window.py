@@ -32,10 +32,10 @@ from models.input_handler import (
     validate_algorithm,
     validate_time_quantum,
 )
-# from algorithms.fcfs import schedule as fcfs
+from algorithms.fcfs import schedule as fcfs
 from algorithms.rr import schedule as rr
 from algorithms.spn import schedule as spn
-# from algorithms.srtn import schedule as srtn
+from algorithms.srtn import schedule as srtn
 from algorithms.hrrn import schedule as hrrn
 
 
@@ -415,10 +415,10 @@ class MainWindow(QMainWindow):
 
         # ── 알고리즘 실행 ─────────────────────────────────────────────────
         algo_map = {
-            # "FCFS": fcfs,
+            "FCFS": fcfs,
             "RR"  : rr,
             "SPN" : spn,
-            # "SRTN": sptn,
+            "SRTN": srtn,
             "HRRN": hrrn,
         }
 
