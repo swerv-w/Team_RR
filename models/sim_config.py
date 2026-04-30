@@ -22,7 +22,7 @@ from typing import Optional, List
 from models.core_config import CoreConfig
 
 
-ALGORITHMS = ["FCFS", "RR", "SPN", "SRTN", "HRRN"]
+ALGORITHMS = ["FCFS", "RR", "SPN", "SRTN", "HRRN", "ATS"]
 
 
 @dataclass

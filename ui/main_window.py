@@ -37,6 +37,7 @@ from algorithms.rr import schedule as rr
 from algorithms.spn import schedule as spn
 from algorithms.srtn import schedule as srtn
 from algorithms.hrrn import schedule as hrrn
+from algorithms.ats import schedule as ats
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -192,7 +193,7 @@ class InputWidget(QGroupBox):
 
         row2.addWidget(QLabel("알고리즘:"))
         self.combo_algo = QComboBox()
-        self.combo_algo.addItems(["FCFS", "RR", "SPN", "SRTN", "HRRN"])
+        self.combo_algo.addItems(["FCFS", "RR", "SPN", "SRTN", "HRRN", "ATS"])
         self.combo_algo.currentTextChanged.connect(self._on_algo_changed)
         row2.addWidget(self.combo_algo)
 
@@ -420,6 +421,7 @@ class MainWindow(QMainWindow):
             "SPN" : spn,
             "SRTN": srtn,
             "HRRN": hrrn,
+            "ATS" : ats,
         }
 
         schedule = algo_map.get(config.algorithm)

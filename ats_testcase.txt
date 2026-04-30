@@ -1,0 +1,147 @@
+=======================================
+ATS 알고리즘 고찰 및 실험 내용입니다. (정성현)
+=======================================
+
+1. 단순히 평균 값을 사용하는게 장점이 될 수 있을까?
+    - 평균값 사용시 '평균의 함정'의 경우에서 스케줄링 기능이 매우 약해진다.
+
+    - 실험 1 : P(BT)에서 P1(100), P2(100), P3(100), P4(100), P5(1)의 경우
+              (모든 프로세스의 도착 시간은 0에 가까우나, P1 < P2 .. < P5이다.)
+        - P1~P4의 NTT값은 3.44~4.01이지만, P5의 NTT값이 325이다. (HRRN에선 101, RR에선 대략 2~4가 나온다)
+        - 단순 평균값 사용은 알고리즘의 worst case에서의 우려가 매우 크다.
+
+    - 실험 2 : 실험 1과 동일하되, time quantum을 avg/2로 지정 -> @@@@@ V2 @@@@@
+        - 기존 코드
+        """
+        avg_bt = sum(p.burst_time for p in procs) / len(procs)
+        tq = math.ceil(avg_bt)
+        """
+        - avg/2 사용 코드
+        avg_bt = sum(p.burst_time for p in procs) / (len(procs) * 2)
+        tq = math.ceil(avg_bt)
+        """
+            - P1~P4의 NTT값은 3.47~4.01으로 실험 1의 결고와 비슷하나, P5의 NTT값이 165로 개선되었다.
+
+    - 실험 3 : 일반적인 경우에서의 RR과 ATS의 대조
+        - 강의 교안 5장의 'RR (Round-Robin), δ = 3'의 경우로 RR과 ATS를 비교 (NTT의 평균)
+            - RR : 2.336
+            - ATS (평균) : 2.58
+            - ATS (평균/2) : 2.648
+                - 일반적인 경우에서 성능이 저하되고 overhead는 더 늘어나는 성능이 떨어지는 문제 발생
+
+2. 평균값이 아닌, 다른 방법은 없을까?
+    - 분산, 표준 편차 같은 방법 -> 제곱, 루트와 같은 연산으로 Overhead 발생 (지양할 것)
+    - BT의 최댓값, 최솟값 사용 -> 정렬 알고리즘? X, OS의 Incremental Update 기능으로 복잡도가 O(1)에 근접
+
+3. 다른 time quantum 계산 방법시 유의사항
+    - 제곱, 루트 또는 부동소수점 연산과 같은 overhead 우려가 있는 계산은 지양해야한다.
+    - time quantum이 지나치게 낮을 경우 RR과 유사하며, 너무 높을 경우 FCFS와 유사해진다.
+
+4. 여전히 남은 문제점
+    - 평균의 함정 문제, 특히 프로세스의 수가 많을수록 이는 더 심해진다.
+        - 프로세스의 수를 고려해보는 것?
+    - RR에 비해 average NTT값이 높은 것?
+
+5. 새로운 계산식
+    - worst case를 고려하여 기본적으로 time quantum = avgBT/2를 사용한다.
+    - RR의 장점인 "응답성"을 ATS에서도 보장하기 위해 프로세스의 수에 따라 time quantum을 낮춘다.
+        - 방안 : '1 / log_2_(프로세스의 수)' 를 time quantum에 반영한다.
+        - log 계산시 overhead 문제? -> bit_length 연산으로 대체
+    - time quantum의 최대 최솟값?
+        - 불필요하다고 판단
+
+6. bit_length를 활용한 새로운 time quantum -> @@@@@ V3 @@@@@
+    - 기존 코드
+    """
+    avg_bt = sum(p.burst_time for p in procs) / len(procs)
+    tq = math.ceil(avg_bt)
+    """
+    - bit_length 활용 코드
+    avg_bt = sum(p.burst_time for p in procs) / len(procs)
+    multiplier_bt = 2 * len(procs).bit_length()
+    tq = math.ceil(avg_bt / multiplier_bt)
+    """
+    - 실험 4 : bit_length 활용 코드시 실제 퍼포먼스 차이
+        - 실험 4-1 : worst case에서의 개선 사항
+            - RR (tq = 3) -> P1~P4의 NTT : 3.98~4.01, P5의 NTT = 13
+            - time quantum (avg) -> P1~P4의 NTT : 3.95~4.01, P5의 NTT = 325
+            - time quantum (avg/2) -> P1~P4의 NTT : 3.95~4.01, P5의 NTT = 165
+            - time quantum (bit_length) -> P1~P4의 NTT : 3.95~4.01, P5의 NTT = 57
+        - 실험 4-2 : 일반적인 경우시 퍼포먼스 차이
+            - RR (tq = 3) -> avgNTT = 2.336
+            - time quantum (avg) -> avgNTT = 2.58
+            - time quantum (avg/2) -> avgNTT = 2.648
+            - time quantum (bit_length) -> avgNTT = 2.78
+        - 실험 4-3 : 불균등 부하시 퍼포먼스 차이
+          P1(AT:0, BT:7), P2(AT:1, BT:5), P3(AT:5, BT:20), P4(AT:12, BT:23), P5(AT:14, BT:15)
+            - RR (tq = 3) -> avgNTT = 2.666
+            - time quantum (avg) -> avgNTT = 2.432
+            - time quantum (avg/2) -> avgNTT = 2.414
+            - time quantum (bit_length) -> avgNTT = 2.666
+    - 실험 5 : 각 실험시 context switching 발생 빈도
+        - CS 카운트를 위한 코드 (main_window.py에서 on_run 부분, processes, gantt, power = schedule_func(config) 이후에 삽입)
+            # 실험용
+            cs_count = 0
+            last_pids = {}  # 코어별 마지막으로 실행된 PID 저장 { 'P0': 1, 'E0': 2 }
+
+            # Gantt 데이터를 시작 시간(start) 순으로 정렬하여 분석
+            for pid, core_id, start, end in sorted(gantt, key=lambda x: x[2]):
+                if core_id in last_pids:
+                    # 해당 코어에서 직전에 실행된 PID와 현재 PID가 다르면 문맥 교환 발생
+                    if last_pids[core_id] != pid:
+                        cs_count += 1
+                last_pids[core_id] = pid
+
+            print("-" * 40)
+            print(f"알고리즘: {selected_algo}")
+            print(f"총 문맥 교환 횟수: {cs_count}회")
+            print("-" * 40)
+            # 실험용
+        ==========
+        case 1. P1(AT:0, BT:3), P2(AT:1, BT:7), P3(AT:3, BT:2), P4(AT:5, BT:5), P5(AT:6, BT:3)
+        - RR (tq = 3) -> total CS = 6
+        - time quantum (avg) -> total CS = 6
+        - time quantum (avg/2) -> total CS = 11
+        - time quantum (bit_length) -> total CS = 7
+        case 2. P1(AT:0, BT:100), P2(AT:0, BT:100), P3(AT:0, BT:100), P4(AT:0, BT:100), P5(AT:0, BT:1)
+        - RR (tq = 3) -> total CS = 136
+        - time quantum (avg) -> total CS = 8
+        - time quantum (avg/2) -> total CS = 12
+        - time quantum (bit_length) -> total CS = 32
+        case 3. P1(AT:0, BT:7), P2(AT:1, BT:5), P3(AT:5, BT:20), P4(AT:12, BT:23), P5(AT:14, BT:15)
+        - RR (tq = 3) -> total CS = 23
+        - time quantum (avg) -> total CS = 7
+        - time quantum (avg/2) -> total CS = 11
+        - time quantum (bit_length) -> total CS = 23
+        ==========
+
+7. 추가적인 문제
+    - 실험 4, 5의 결과로, worst case에서 bit_length 사용시 개선이 되었으나, 이외 측면에서 대체적으로 성능이 떨어짐을 확인.
+    - 인과 분석 : multiplier_bt = 2 * len(procs).bit_length()에 따라 프로세스의 수가 4개뿐인데도
+                분모가 6, 5개 이상이면 8 이상이 되서 tq가 지나치게 낮아짐
+    - 추가 개선 : if문 도입과 계산식 추가 수정을 통한 완화 -> @@@@@ V4 @@@@@
+        """
+        avg_bt = sum(p.burst_time for p in procs) / len(procs)
+        if len(procs) < 4:
+            tq = math.ceil(avg_bt / 2) # 프로세스의 갯수가 4개 미만일 땐 /2 를 사용한다.
+        else:
+            multiplier_bt = len(procs).bit_length()
+            tq = math.ceil(avg_bt / multiplier_bt)
+            # 프로세스의 갯수가 4개 이상일 땐 bit_length()를 활용한다.
+            # 4개 이상부터 /3 /4 ...으로 증가하나 이는 로그 함수와 같이 완만한 형태로 증가한다.
+        """
+
+
+8. if문과 bit_length()를 활용한 실험 결과
+    - 실험 6 : if문과 bit_length()를 활용한 ATS의 퍼포먼스
+        case 1. P1(AT:0, BT:3), P2(AT:1, BT:7), P3(AT:3, BT:2), P4(AT:5, BT:5), P5(AT:6, BT:3)
+        - time quantum (if + bit_length) -> total CS = 11, avgNTT = 2.648
+        case 2. P1(AT:0, BT:100), P2(AT:0, BT:100), P3(AT:0, BT:100), P4(AT:0, BT:100), P5(AT:0, BT:1)
+        - time quantum (if + bit_length) -> total CS = 16, P1~P4의 NTT : 3.44~4.01, P5의 NTT = 109
+        case 3. P1(AT:0, BT:7), P2(AT:1, BT:5), P3(AT:5, BT:20), P4(AT:12, BT:23), P5(AT:14, BT:15)
+        - time quantum (if + bit_length) -> total CS = 13, avgNTT = 2.494
+    - 해당 경우 퍼포먼스의 차이가 완화되었으며, 프로세스의 수가 더 늘어남에 따라 스케줄링이 복잡해질 경우 개선의 여지가 생김.
+
+9. 더 나은 개선을 향한 방안
+    - time quantum의 min, max 수치를 설정?
+    - core의 활용?
